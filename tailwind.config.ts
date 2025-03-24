@@ -8,7 +8,11 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  theme: {},
+  theme: {
+    colors: {
+      kakao: "#FEE500",
+    },
+  },
   plugins: [require("@tailwindcss/typography")],
 };
 
