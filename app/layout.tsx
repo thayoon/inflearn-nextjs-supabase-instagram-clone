@@ -6,6 +6,8 @@ import ReactQueryClientProvider from "config/ReactQueryClientProvider";
 import RecoilProvider from "config/RecoilProvider";
 import MainLayout from "components/layouts/main-layout";
 import Auth from "components/auth";
+import { createServerSupabaseClient } from "utils/supabase/server";
+import AuthProvider from "config/auth-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,12 +16,17 @@ export const metadata: Metadata = {
   description: "nextjs supabase Instagram clone",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const loggedin = false;
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   return (
     <html lang="en">
       <head>
@@ -35,7 +42,9 @@ export default function RootLayout({
         <RecoilProvider>
           <ReactQueryClientProvider>
             <ThemeProvider>
-              {loggedin ? <MainLayout>{children}</MainLayout> : <Auth />}
+              <AuthProvider accessToken={session?.access_token}>
+                {session?.user ? <MainLayout>{children}</MainLayout> : <Auth />}
+              </AuthProvider>
             </ThemeProvider>
           </ReactQueryClientProvider>
         </RecoilProvider>
