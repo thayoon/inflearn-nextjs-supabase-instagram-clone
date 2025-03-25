@@ -30,6 +30,7 @@ export default function ChatPeopleList({ loggedInUser }) {
     <div className="h-screen min-w-60 flex flex-col bg-gray-50">
       {getAllUsersQuery.data?.map((user, index) => (
         <Person
+          key={user.id}
           onClick={() => {
             setSelectedUserID(user.id);
             setSelectedUserIndex(index);
@@ -42,24 +43,6 @@ export default function ChatPeopleList({ loggedInUser }) {
           onChatScreen={false}
         />
       ))}
-      {/* <Person
-        onClick={() => setSelectedIndex(0)}
-        index={0}
-        userId={"user1"}
-        name={"name1"}
-        onlineAt={new Date().toISOString()}
-        isActive={selectedIndex === 0}
-        onChatScreen={false}
-      />
-      <Person
-        onClick={() => setSelectedIndex(1)}
-        index={1}
-        userId={"user2"}
-        name={"name2"}
-        onlineAt={new Date().toISOString()}
-        isActive={selectedIndex === 1}
-        onChatScreen={false}
-      /> */}
     </div>
   );
 }
