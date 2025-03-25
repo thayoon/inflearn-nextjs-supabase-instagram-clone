@@ -16,7 +16,7 @@ export default function Sidebar() {
         <Link href={"/people"}>
           <People className="text-2xl" />
         </Link>
-        <Link href={"/search"}>
+        <Link href={"/discover"}>
           <Search className="text-2xl" />
         </Link>
         <Link href={"/chat"}>
