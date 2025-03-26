@@ -9,10 +9,63 @@ import {
   selectedUserIndexState,
 } from "utils/recoil/atoms";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getAllMessages, getUserById, sendMessage } from "actions/chatActions";
+import { getUserById } from "actions/chatActions";
 import { useEffect, useState } from "react";
 import { Spinner } from "@material-tailwind/react";
 import { createBrowserSupabaseClient } from "utils/supabase/client";
+
+export async function sendMessage({ message, chatUserId }) {
+  const supabase = createBrowserSupabaseClient();
+
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session.user) {
+    throw new Error("User is not authenticated");
+  }
+
+  const { data, error: sendMessageError } = await supabase
+    .from("message")
+    .insert({
+      message,
+      receiver: chatUserId,
+      // sender: session.user.id,
+    });
+
+  if (sendMessageError) {
+    throw new Error(sendMessageError.message);
+  }
+
+  return data;
+}
+
+export async function getAllMessages({ chatUserId }) {
+  const supabase = createBrowserSupabaseClient();
+
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session.user) {
+    throw new Error("User is not authenticated");
+  }
+
+  const { data, error: getMessagesError } = await supabase
+    .from("message")
+    .select("*")
+    .or(`receiver.eq.${chatUserId}, receiver.eq.${session.user.id}`)
+    .or(`sender.eq.${chatUserId}, sender.eq.${session.user.id}`)
+    .order("created_at", { ascending: true });
+
+  if (getMessagesError) {
+    return [];
+  }
+
+  return data;
+}
 
 export default function ChatScreen() {
   const selectedUserID = useRecoilValue(selectedUserIdState);
@@ -92,6 +145,9 @@ export default function ChatScreen() {
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sendMessageMutation.mutate();
+          }}
           className="p-3 w-full border-2 border-light-blue-600"
           placeholder="메시지를 입력하세요."
         />
