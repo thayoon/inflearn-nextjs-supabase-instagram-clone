@@ -10,7 +10,7 @@ import {
 } from "utils/recoil/atoms";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getUserById } from "actions/chatActions";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@material-tailwind/react";
 import { createBrowserSupabaseClient } from "utils/supabase/client";
 
@@ -73,6 +73,20 @@ export default function ChatScreen() {
   const presence = useRecoilValue(presenceState);
   const [message, setMessage] = useState("");
 
+  const chatRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessageAlert, setNewMessageAlert] = useState(false);
+
+  const handleScroll = () => {
+    if (!chatRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = chatRef.current;
+    const atBottom = scrollHeight - clientHeight - scrollTop < 10;
+
+    setIsAtBottom(atBottom);
+    if (atBottom) setNewMessageAlert(false);
+  };
+
   const supabase = createBrowserSupabaseClient();
 
   const selectedUserQuery = useQuery({
@@ -117,6 +131,19 @@ export default function ChatScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!chatRef.current) return;
+
+    const lastMessage =
+      getAllMessagesQuery.data?.[getAllMessagesQuery.data.length - 1];
+
+    if (lastMessage?.receiver === selectedUserID) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    } else if (!isAtBottom) {
+      setNewMessageAlert(true);
+    }
+  }, [getAllMessagesQuery.data]);
+
   return selectedUserQuery.data !== null ? (
     <div className="w-full h-screen flex flex-col">
       {/* Active 유저 영역 */}
@@ -129,7 +156,26 @@ export default function ChatScreen() {
         onChatScreen={true}
       />
       {/* 채팅 영역 */}
-      <div className="w-full overflow-y-scroll flex-1 flex flex-col p-4 gap-3">
+      <div
+        ref={chatRef}
+        onScroll={handleScroll}
+        className="w-full overflow-y-scroll flex-1 flex flex-col p-4 gap-3 relative"
+      >
+        {/* 새 메시지 알림 */}
+        {newMessageAlert && (
+          <div
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-500 text-black px-4 py-2 rounded-2xl cursor-pointer"
+            onClick={() => {
+              chatRef.current?.scrollTo({
+                top: chatRef.current.scrollHeight,
+                behavior: "smooth",
+              });
+              setNewMessageAlert(false);
+            }}
+          >
+            새로운 메시지 📩
+          </div>
+        )}
         {getAllMessagesQuery.data?.map((message) => (
           <Message
             key={message.id}
