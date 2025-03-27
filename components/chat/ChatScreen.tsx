@@ -41,6 +41,18 @@ export async function sendMessage({ message, chatUserId }) {
   return data;
 }
 
+export async function deletedMessage(id) {
+  const supabase = createBrowserSupabaseClient();
+  const { error } = await supabase
+    .from("message")
+    .update({ is_deleted: true })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function getAllMessages({ chatUserId }) {
   if (chatUserId === null) return [];
 
@@ -114,6 +126,13 @@ export default function ChatScreen() {
     queryFn: () => getAllMessages({ chatUserId: selectedUserID }),
   });
 
+  const deletedMessageMutation = useMutation({
+    mutationFn: deletedMessage,
+    onSuccess: () => {
+      getAllMessagesQuery.refetch();
+    },
+  });
+
   useEffect(() => {
     const channel = supabase
       .channel("message_postgres_changes")
@@ -122,6 +141,15 @@ export default function ChatScreen() {
         { event: "INSERT", schema: "public", table: "message" },
         (payload) => {
           if (payload.eventType === "INSERT" && !payload.errors) {
+            getAllMessagesQuery.refetch();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "message" },
+        (payload) => {
+          if (payload.eventType === "UPDATE" && !payload.errors) {
             getAllMessagesQuery.refetch();
           }
         }
@@ -182,7 +210,13 @@ export default function ChatScreen() {
           <Message
             key={message.id}
             isFromMe={message.receiver === selectedUserID}
-            message={message.message}
+            isDeleted={message.is_deleted}
+            onClickDeleted={() => deletedMessageMutation.mutate(message.id)}
+            message={
+              message.is_deleted
+                ? "이 메시지는 삭제되었습니다."
+                : message.message
+            }
           />
         ))}
       </div>
