@@ -42,6 +42,8 @@ export async function sendMessage({ message, chatUserId }) {
 }
 
 export async function getAllMessages({ chatUserId }) {
+  if (chatUserId === null) return [];
+
   const supabase = createBrowserSupabaseClient();
 
   const {
