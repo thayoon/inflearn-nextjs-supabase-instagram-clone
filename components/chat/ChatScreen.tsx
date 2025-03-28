@@ -88,18 +88,7 @@ export default function ChatScreen() {
   const [message, setMessage] = useState("");
 
   const chatRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [newMessageAlert, setNewMessageAlert] = useState(false);
-
-  const handleScroll = () => {
-    if (!chatRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = chatRef.current;
-    const atBottom = scrollHeight - clientHeight - scrollTop < 10;
-
-    setIsAtBottom(atBottom);
-    if (atBottom) setNewMessageAlert(false);
-  };
+  const [scrollOn, setScrollOn] = useState(true);
 
   const supabase = createBrowserSupabaseClient();
 
@@ -118,6 +107,7 @@ export default function ChatScreen() {
     onSuccess: () => {
       setMessage("");
       getAllMessagesQuery.refetch();
+      setScrollOn(true);
     },
   });
 
@@ -130,6 +120,7 @@ export default function ChatScreen() {
     mutationFn: deletedMessage,
     onSuccess: () => {
       getAllMessagesQuery.refetch();
+      setScrollOn(false);
     },
   });
 
@@ -151,6 +142,7 @@ export default function ChatScreen() {
         (payload) => {
           if (payload.eventType === "UPDATE" && !payload.errors) {
             getAllMessagesQuery.refetch();
+            setScrollOn(false);
           }
         }
       )
@@ -162,17 +154,17 @@ export default function ChatScreen() {
   }, []);
 
   useEffect(() => {
-    if (!chatRef.current) return;
+    if (!chatRef.current || !getAllMessagesQuery.isSuccess) return;
 
-    const lastMessage =
-      getAllMessagesQuery.data?.[getAllMessagesQuery.data.length - 1];
-
-    if (lastMessage?.receiver === selectedUserID) {
+    if (scrollOn) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    } else if (!isAtBottom) {
-      setNewMessageAlert(true);
     }
-  }, [getAllMessagesQuery.data]);
+  }, [
+    selectedUserID,
+    getAllMessagesQuery.isSuccess,
+    getAllMessagesQuery.data,
+    scrollOn,
+  ]);
 
   return selectedUserQuery.data !== null ? (
     <div className="w-full h-screen flex flex-col">
@@ -188,24 +180,8 @@ export default function ChatScreen() {
       {/* 채팅 영역 */}
       <div
         ref={chatRef}
-        onScroll={handleScroll}
         className="w-full overflow-y-scroll flex-1 flex flex-col p-4 gap-3 relative"
       >
-        {/* 새 메시지 알림 */}
-        {newMessageAlert && (
-          <div
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-500 text-black px-4 py-2 rounded-2xl cursor-pointer"
-            onClick={() => {
-              chatRef.current?.scrollTo({
-                top: chatRef.current.scrollHeight,
-                behavior: "smooth",
-              });
-              setNewMessageAlert(false);
-            }}
-          >
-            새로운 메시지 📩
-          </div>
-        )}
         {getAllMessagesQuery.data?.map((message) => (
           <Message
             key={message.id}
