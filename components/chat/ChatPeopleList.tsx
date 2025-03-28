@@ -10,7 +10,7 @@ import {
 } from "utils/recoil/atoms";
 import { getAllUsers } from "actions/chatActions";
 import { createBrowserSupabaseClient } from "utils/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function ChatPeopleList({ loggedInUser }) {
   const [selectedUserID, setSelectedUserID] =
@@ -19,6 +19,7 @@ export default function ChatPeopleList({ loggedInUser }) {
     selectedUserIndexState
   );
   const [presence, setPresence] = useRecoilState(presenceState);
+  const [onChat, setOnChat] = useState(false);
 
   const supabase = createBrowserSupabaseClient();
 
@@ -76,8 +77,15 @@ export default function ChatPeopleList({ loggedInUser }) {
         <Person
           key={user.id}
           onClick={() => {
-            setSelectedUserID(user.id);
-            setSelectedUserIndex(index);
+            if (!onChat) {
+              setOnChat(true);
+              setSelectedUserID(user.id);
+              setSelectedUserIndex(index);
+            } else {
+              setOnChat(false);
+              setSelectedUserID(null);
+              setSelectedUserIndex(null);
+            }
           }}
           index={index}
           userId={user.id}
