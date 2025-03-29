@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     images: [
       {
-        url: "/images/inflearngram.png",
+        url: "https://inflearn-nextjs-supabase-instagram-clone.vercel.app/images/inflearngram.png",
         alt: "inflearngram",
       },
     ],
