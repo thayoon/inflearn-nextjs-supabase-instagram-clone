@@ -3,7 +3,6 @@
 import { Button, Input } from "@material-tailwind/react";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import Image from "next/image";
 import { createBrowserSupabaseClient } from "utils/supabase/client";
 
 export default function SignUp({ setView }) {
