@@ -13,7 +13,9 @@ export default function SignIn({ setView }) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        redirectTo: process.env.NEXT_PUBLIC_VERCEL_URL
+        redirectTo: process.env.NEXT_PUBLIC_DOMAIN_URL
+          ? `https://${process.env.NEXT_PUBLIC_DOMAIN_URL}/auth/callback`
+          : process.env.NEXT_PUBLIC_VERCEL_URL
           ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/auth/callback`
           : "http://localhost:3000/auth/callback",
       },

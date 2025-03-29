@@ -19,7 +19,11 @@ export default function SignUp({ setView }) {
         email,
         password,
         options: {
-          emailRedirectTo: "http://localhost:3000/signup/confirm",
+          emailRedirectTo: process.env.NEXT_PUBLIC_DOMAIN_URL
+            ? `https://${process.env.NEXT_PUBLIC_DOMAIN_URL}/signup/confirm`
+            : process.env.NEXT_PUBLIC_VERCEL_URL
+            ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/signup/confirm`
+            : "http://localhost:3000/signup/confirm",
         },
       });
 
@@ -55,12 +59,13 @@ export default function SignUp({ setView }) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        redirectTo: process.env.NEXT_PUBLIC_VERCEL_URL
+        redirectTo: process.env.NEXT_PUBLIC_DOMAIN_URL
+          ? `https://${process.env.NEXT_PUBLIC_DOMAIN_URL}/auth/callback`
+          : process.env.NEXT_PUBLIC_VERCEL_URL
           ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/auth/callback`
           : "http://localhost:3000/auth/callback",
       },
     });
-    console.log(data);
   };
   return (
     <div className="flex flex-col gap-4">
