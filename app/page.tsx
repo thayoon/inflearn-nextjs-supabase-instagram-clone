@@ -5,6 +5,9 @@ import { createServerSupabaseClient } from "utils/supabase/server";
 export const metadata: Metadata = {
   title: "Inflearngram clone",
   description: "nextjs supabase Instagram clone project",
+  openGraph: {
+    images: ["/images/inflearngram.png"],
+  },
 };
 
 export default async function Home() {

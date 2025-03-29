@@ -15,14 +15,7 @@ export const metadata: Metadata = {
   title: "Instagram clone",
   description: "nextjs supabase Instagram clone",
   openGraph: {
-    images: [
-      {
-        url: "/images/inflearngram.png",
-        width: 1200,
-        height: 630,
-        alt: "inflearngram - Instagram clone logo",
-      },
-    ],
+    images: ["/images/inflearngram.png"],
   },
 };
 
