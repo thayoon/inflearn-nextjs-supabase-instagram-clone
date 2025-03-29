@@ -41,6 +41,7 @@ export type Database = {
           id: number
           is_deleted: boolean
           message: string
+          read_at: string | null
           receiver: string
           sender: string
         }
@@ -49,14 +50,16 @@ export type Database = {
           id?: number
           is_deleted?: boolean
           message: string
+          read_at?: string | null
           receiver: string
-          sender: string
+          sender?: string
         }
         Update: {
           created_at?: string
           id?: number
           is_deleted?: boolean
           message?: string
+          read_at?: string | null
           receiver?: string
           sender?: string
         }

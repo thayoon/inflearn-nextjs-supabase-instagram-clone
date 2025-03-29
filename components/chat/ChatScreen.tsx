@@ -16,7 +16,6 @@ import { createBrowserSupabaseClient } from "utils/supabase/client";
 
 export async function sendMessage({ message, chatUserId }) {
   const supabase = createBrowserSupabaseClient();
-
   const {
     data: { session },
     error,
@@ -50,6 +49,32 @@ export async function deletedMessage(id) {
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+export async function readMessage({ chatUserId }) {
+  if (chatUserId === null) return;
+
+  const supabase = createBrowserSupabaseClient();
+
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session.user) {
+    throw new Error("User is not authenticated");
+  }
+
+  const { error: readMessagesError } = await supabase
+    .from("message")
+    .update({ read_at: new Date().toISOString() })
+    .eq("receiver", session.user.id)
+    .eq("sender", chatUserId)
+    .is("read_at", null);
+
+  if (readMessagesError) {
+    throw new Error(readMessagesError.message);
   }
 }
 
@@ -88,6 +113,7 @@ export default function ChatScreen({ loggedInUser }) {
   const [message, setMessage] = useState("");
 
   const channelRef = useRef(null);
+  const [isJoined, setIsJoined] = useState(false);
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   const [typingUsers, setTypingUsers] = useState([]);
@@ -104,7 +130,7 @@ export default function ChatScreen({ loggedInUser }) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      sendMessage({
+      await sendMessage({
         message,
         chatUserId: selectedUserID,
       });
@@ -124,21 +150,31 @@ export default function ChatScreen({ loggedInUser }) {
   const deletedMessageMutation = useMutation({
     mutationFn: deletedMessage,
     onSuccess: () => {
-      getAllMessagesQuery.refetch();
+      // getAllMessagesQuery.refetch();
       setScrollOn(false);
     },
   });
 
+  const readMessageMutation = useMutation({
+    mutationFn: () => readMessage({ chatUserId: selectedUserID }),
+    onSuccess: () => {
+      // getAllMessagesQuery.refetch();
+    },
+  });
+
   const realTimeSubscription = () => {
+    const presenceKey = `${loggedInUser.email?.split("@")?.[0]}-${
+      selectedUserQuery.data?.email?.split("@")?.[0]
+    }`;
+
     const channel = supabase.channel("message_postgres_changes", {
       config: {
         presence: {
-          key: `${loggedInUser.email?.split("@")?.[0]}-${
-            selectedUserQuery.data?.email?.split("@")?.[0]
-          }`,
+          key: presenceKey,
         },
       },
     });
+
     channel
       .on(
         "postgres_changes",
@@ -146,6 +182,7 @@ export default function ChatScreen({ loggedInUser }) {
         (payload) => {
           if (payload.eventType === "INSERT" && !payload.errors) {
             getAllMessagesQuery.refetch();
+            setScrollOn(true);
           }
         }
       )
@@ -165,13 +202,7 @@ export default function ChatScreen({ loggedInUser }) {
         let filteredUsers = [];
 
         Object.keys(newState).forEach((key) => {
-          if (
-            key ===
-            `${loggedInUser.email?.split("@")?.[0]}-${
-              selectedUserQuery.data?.email?.split("@")?.[0]
-            }`
-          )
-            return;
+          if (key === presenceKey) return;
 
           const presences = newState[key];
 
@@ -189,6 +220,22 @@ export default function ChatScreen({ loggedInUser }) {
         });
 
         setTypingUsers(filteredUsers);
+      })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        const newState = newPresences;
+        Object.keys(newState).forEach((key) => {
+          if (key === presenceKey) return;
+
+          if (!isJoined) {
+            setIsJoined(true);
+            readMessageMutation.mutate();
+          }
+        });
+      })
+      .on("presence", { event: "leave" }, ({ key }) => {
+        if (key === presenceKey) return;
+
+        setIsJoined(false);
       })
       .subscribe(async (status) => {
         if (status !== "SUBSCRIBED") return;
@@ -235,6 +282,7 @@ export default function ChatScreen({ loggedInUser }) {
 
     return () => {
       channelRef.current?.unsubscribe();
+      setIsJoined(false);
     };
   }, [selectedUserQuery?.data]);
 
@@ -272,6 +320,7 @@ export default function ChatScreen({ loggedInUser }) {
             key={message.id}
             isFromMe={message.receiver === selectedUserID}
             isDeleted={message.is_deleted}
+            isReadAt={message.read_at}
             onClickDeleted={() => deletedMessageMutation.mutate(message.id)}
             message={
               message.is_deleted
@@ -304,7 +353,10 @@ export default function ChatScreen({ loggedInUser }) {
             value={message}
             onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessageMutation.mutate();
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                sendMessageMutation.mutate();
+              }
             }}
             className="p-3 w-full border-2 border-light-blue-600"
             placeholder="메시지를 입력하세요."

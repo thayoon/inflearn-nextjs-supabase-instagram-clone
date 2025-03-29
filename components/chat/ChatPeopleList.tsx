@@ -53,7 +53,7 @@ export default function ChatPeopleList({ loggedInUser }) {
         onlineAt: new Date().toISOString(),
       });
 
-      console.log(newPresenceStatus);
+      // console.log(newPresenceStatus);
     });
 
     return () => {
@@ -66,7 +66,6 @@ export default function ChatPeopleList({ loggedInUser }) {
     queryKey: ["users"],
     queryFn: async () => {
       const allUser = await getAllUsers();
-      console.log(allUser);
       return allUser.filter((user) => user.id !== loggedInUser.id);
     },
   });
