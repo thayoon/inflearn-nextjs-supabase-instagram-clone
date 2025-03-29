@@ -125,7 +125,7 @@ export default function SignUp({ setView }) {
           onClick={() => signInWithKakao()}
           className="w-full text-md py-1"
         >
-          <Image
+          <img
             src="/images/kakao_sync_medium_wide.png"
             alt="카카오로 시작하기"
             width={300}

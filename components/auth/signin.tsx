@@ -3,7 +3,6 @@
 import { Button, Input } from "@material-tailwind/react";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import Image from "next/image";
 import { createBrowserSupabaseClient } from "utils/supabase/client";
 
 export default function SignIn({ setView }) {
@@ -74,7 +73,7 @@ export default function SignIn({ setView }) {
           onClick={() => signInWithKakao()}
           className="w-full text-md py-1"
         >
-          <Image
+          <img
             src="/images/kakao_login_medium_wide.png"
             alt="카카오 로그인"
             width={300}

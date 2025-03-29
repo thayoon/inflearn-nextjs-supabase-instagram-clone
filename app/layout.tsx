@@ -14,6 +14,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Instagram clone",
   description: "nextjs supabase Instagram clone",
+  openGraph: {
+    images: "/images/inflearngram.png",
+  },
 };
 
 export default async function RootLayout({
