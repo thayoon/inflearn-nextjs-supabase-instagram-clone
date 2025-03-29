@@ -6,7 +6,12 @@ export const metadata: Metadata = {
   title: "Inflearngram clone",
   description: "nextjs supabase Instagram clone project",
   openGraph: {
-    images: ["/images/inflearngram.png"],
+    images: [
+      {
+        url: "/images/inflearngram.png",
+        alt: "inflearngram",
+      },
+    ],
   },
 };
 
