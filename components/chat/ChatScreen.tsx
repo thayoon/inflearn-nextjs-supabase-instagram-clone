@@ -81,11 +81,16 @@ export async function getAllMessages({ chatUserId }) {
   return data;
 }
 
-export default function ChatScreen() {
+export default function ChatScreen({ loggedInUser }) {
   const selectedUserID = useRecoilValue(selectedUserIdState);
   const selectedUserIndex = useRecoilValue(selectedUserIndexState);
   const presence = useRecoilValue(presenceState);
   const [message, setMessage] = useState("");
+
+  const channelRef = useRef(null);
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef(null);
+  const [typingUsers, setTypingUsers] = useState([]);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const [scrollOn, setScrollOn] = useState(true);
@@ -124,9 +129,17 @@ export default function ChatScreen() {
     },
   });
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("message_postgres_changes")
+  const realTimeSubscription = () => {
+    const channel = supabase.channel("message_postgres_changes", {
+      config: {
+        presence: {
+          key: `${loggedInUser.email?.split("@")?.[0]}-${
+            selectedUserQuery.data?.email?.split("@")?.[0]
+          }`,
+        },
+      },
+    });
+    channel
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "message" },
@@ -146,12 +159,84 @@ export default function ChatScreen() {
           }
         }
       )
-      .subscribe();
+      .on("presence", { event: "sync" }, () => {
+        const newState = channel.presenceState();
+
+        let filteredUsers = [];
+
+        Object.keys(newState).forEach((key) => {
+          if (
+            key ===
+            `${loggedInUser.email?.split("@")?.[0]}-${
+              selectedUserQuery.data?.email?.split("@")?.[0]
+            }`
+          )
+            return;
+
+          const presences = newState[key];
+
+          presences.forEach(
+            (presence: {
+              presence_ref: string;
+              isTyping?: boolean;
+              name?: string;
+            }) => {
+              if (presence.isTyping) {
+                filteredUsers.push(presence.name);
+              }
+            }
+          );
+        });
+
+        setTypingUsers(filteredUsers);
+      })
+      .subscribe(async (status) => {
+        if (status !== "SUBSCRIBED") return;
+
+        await channel.track({
+          onlineAt: new Date().toISOString(),
+          isTyping: false,
+          name: loggedInUser.email?.split("@")?.[0],
+        });
+      });
+
+    return channel;
+  };
+
+  const trackTyping = async (status) => {
+    await channelRef.current.track({
+      isTyping: status,
+      name: loggedInUser.email?.split("@")?.[0],
+    });
+  };
+
+  const handleInputChange = async (e) => {
+    setMessage(e.target.value);
+
+    if (!isTypingRef.current) {
+      await trackTyping(true);
+      isTypingRef.current = true;
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(async () => {
+      if (!isTypingRef.current) return;
+      await trackTyping(false);
+
+      isTypingRef.current = false;
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (!selectedUserID) return;
+
+    channelRef.current = realTimeSubscription();
 
     return () => {
-      channel.unsubscribe();
+      channelRef.current?.unsubscribe();
     };
-  }, []);
+  }, [selectedUserQuery?.data]);
 
   useEffect(() => {
     if (!chatRef.current || !getAllMessagesQuery.isSuccess) return;
@@ -198,24 +283,40 @@ export default function ChatScreen() {
       </div>
 
       {/* 채팅방 영역 */}
-      <div className="flex">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") sendMessageMutation.mutate();
-          }}
-          className="p-3 w-full border-2 border-light-blue-600"
-          placeholder="메시지를 입력하세요."
-        />
-        <button
-          onClick={() => sendMessageMutation.mutate()}
-          className="min-w-20 p-3 bg-light-blue-600 text-white"
-          color="light-blue"
-        >
-          {sendMessageMutation.isPending ? <Spinner /> : <span>전송</span>}
-        </button>
+      <div className="flex flex-col">
+        {typingUsers.length > 0 && (
+          <div className="w-full flex items-center space-x-2 text-gray-500">
+            <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
+            <div
+              className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <div
+              className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+              style={{ animationDelay: "0.4s" }}
+            />
+            <span className="text-sm">{typingUsers[0]} is typing...</span>
+          </div>
+        )}
+        <div className="flex">
+          <input
+            type="text"
+            value={message}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") sendMessageMutation.mutate();
+            }}
+            className="p-3 w-full border-2 border-light-blue-600"
+            placeholder="메시지를 입력하세요."
+          />
+          <button
+            onClick={() => sendMessageMutation.mutate()}
+            className="min-w-20 p-3 bg-light-blue-600 text-white"
+            color="light-blue"
+          >
+            {sendMessageMutation.isPending ? <Spinner /> : <span>전송</span>}
+          </button>
+        </div>
       </div>
     </div>
   ) : (

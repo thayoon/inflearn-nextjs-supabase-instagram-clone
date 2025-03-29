@@ -11,7 +11,7 @@ export default async function ChatPage() {
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <ChatPeopleList loggedInUser={session?.user} />
-      <ChatScreen />
+      <ChatScreen loggedInUser={session?.user} />
     </div>
   );
 }
